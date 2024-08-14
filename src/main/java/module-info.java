@@ -2,6 +2,7 @@ module org.webapp.checkers {
     requires javafx.controls;
     requires javafx.fxml;
 
+    exports org.webapp.checkers.model;
 
     opens org.webapp.checkers to javafx.fxml, javafx.graphics;
     // Export the package where your FXML controller is located

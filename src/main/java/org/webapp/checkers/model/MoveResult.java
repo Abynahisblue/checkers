@@ -3,23 +3,22 @@ package org.webapp.checkers.model;
 
 public class MoveResult {
     private MoveType type;
-    private Piece piece;
+    private Piece capturedPiece;
 
     public MoveResult(MoveType type) {
-        this(type, null);
+        this.type = type;
     }
 
-    public MoveResult(MoveType type, Piece piece) {
+    public MoveResult(MoveType type, Piece capturedPiece) {
         this.type = type;
-        this.piece = piece;
+        this.capturedPiece = capturedPiece;
     }
 
     public MoveType getType() {
         return type;
     }
 
-    public Piece getPiece() {
-        return piece;
+    public Piece getCapturedPiece() {
+        return capturedPiece;
     }
 }
-

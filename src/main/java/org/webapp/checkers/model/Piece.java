@@ -1,69 +1,43 @@
 package org.webapp.checkers.model;
 
-
-
-import javafx.scene.layout.StackPane;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
-public class Piece extends StackPane {
-    private PieceType type;
-    private double mouseX, mouseY;
-    private double oldX, oldY;
-    private boolean isKing = false;
+public class Piece extends Region {
+    private PieceType pieceType;
+    private int x, y;
+    private Tile tile;
+    private Circle visual;
 
-    public Piece(PieceType type, int x, int y) {
-        this.type = type;
-        move(x, y);
+    public Piece(PieceType pieceType, Tile tile) {
+        this.pieceType = pieceType;
+        this.tile = tile;
 
-        Circle circle = new Circle(40);
-        circle.setFill(type == PieceType.RED ? Color.RED : Color.WHITE);
-        circle.setStroke(Color.BLACK);
-        circle.setStrokeWidth(2);
-        getChildren().add(circle);
-
-        setOnMousePressed(e -> {
-            mouseX = e.getSceneX();
-            mouseY = e.getSceneY();
-        });
-
-        setOnMouseDragged(e -> {
-            relocate(e.getSceneX() - mouseX + oldX, e.getSceneY() - mouseY + oldY);
-        });
+        visual = new Circle(30); // Example size
+        visual.setFill(pieceType == PieceType.RED ? Color.RED : Color.BLACK);
+        this.getChildren().add(visual); // Add the circle to the piece
     }
 
-    public void move(int x, int y) {
-        oldX = x * 80;
-        oldY = y * 80;
-        relocate(oldX, oldY);
+    public Piece(PieceType pieceType, int x, int y) {
+        this.pieceType = pieceType;
+        this.x = x;
+        this.y = y;
     }
 
-    public void abortMove() {
-        relocate(oldX, oldY);
+    public Circle getVisual() {
+        return visual;
     }
 
-    public double getOldX() {
-        return oldX;
+    public PieceType getPieceType() {
+        return pieceType;
     }
 
-    public double getOldY() {
-        return oldY;
+    public Tile getTile() {
+        return tile;
     }
 
-    public PieceType getType() {
-        return type;
-    }
-
-    public void promoteToKing() {
-        isKing = true;
-        Circle kingCircle = new Circle(15);
-        kingCircle.setFill(Color.GOLD);
-        kingCircle.setTranslateY(-5);
-        getChildren().add(kingCircle);
-    }
-
-    public boolean isKing() {
-        return isKing;
+    public void setTile(Tile tile) {
+        this.tile = tile;
     }
 }
-
