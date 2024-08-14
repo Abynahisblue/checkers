@@ -14,7 +14,7 @@ public class DraughtsController {
     @FXML
     private Label statusLabel;
 
-    private static final int TILE_SIZE = 100;
+    private static final int TILE_SIZE = 80;
     private static final int WIDTH = 10;
     private static final int HEIGHT = 10;
     private final Tile[][] board = new Tile[WIDTH][HEIGHT];
@@ -36,24 +36,23 @@ public class DraughtsController {
         selectedPiece = null;
         isPlayer1Turn = true;
         int redCount = 0;
-        int blackCount = 0;
+        int whiteCount = 0;
 
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
                 Tile tile = new Tile((x + y) % 2 == 0, x, y, this);
                 board[x][y] = tile;
                 boardPane.add(tile, x, y);
-                tile.setOnMouseClicked(this::handleClick);
 
                 if ((x + y) % 2 != 0) {
                     if (y < 4 && redCount < 20) {
                         Piece piece = new Piece(PieceType.RED, tile);
                         tile.setPiece(piece);
                         redCount++;
-                    } else if (y >= 6 && blackCount < 20) {
+                    } else if (y >= 6 && whiteCount < 20) {
                         Piece piece = new Piece(PieceType.BLACK, tile);
                         tile.setPiece(piece);
-                        blackCount++;
+                        whiteCount++;
                     }
                 }
             }
@@ -69,12 +68,13 @@ public class DraughtsController {
             if (result.getType() != MoveType.NONE) {
                 makeMove(selectedPiece, clickedTile, result);
                 selectedPiece = null;
-                clearHighlights();
-                switchTurns();
+                clearHighlights();  // Clear all highlights after a move
+                switchTurns();       // Switch turns
             }
         } else {
             if (clickedTile.hasPiece() && isCorrectPlayerTurn(clickedTile.getPiece())) {
                 selectedPiece = clickedTile.getPiece();
+                clearHighlights();  // Clear previous highlights before highlighting new moves
                 highlightPossibleMoves();
             }
         }
@@ -107,7 +107,7 @@ public class DraughtsController {
             Tile capturedTile = result.getCapturedPiece().getTile();
             capturedTile.setPiece(null);
         }
-        //selectedPiece = null;
+        selectedPiece = null;
     }
 
     private void highlightPossibleMoves() {
@@ -127,7 +127,7 @@ public class DraughtsController {
         if (isValidTile(x, y)) {
             Tile tile = board[x][y];
             if (!tile.hasPiece()) {
-                tile.setStyle("-fx-background-color: lightgreen;");
+                tile.setStyle("-fx-background-color: lightgreen;");  // Highlight valid move tiles
             }
         }
     }
@@ -138,7 +138,7 @@ public class DraughtsController {
             Tile midTile = board[midX][midY];
 
             if (!targetTile.hasPiece() && midTile.hasPiece() && midTile.getPiece().getPieceType() != selectedPiece.getPieceType()) {
-                targetTile.setStyle("-fx-background-color: lightgreen;");
+                targetTile.setStyle("-fx-background-color: lightblue;");  // Highlight valid capture move tiles
             }
         }
     }
@@ -147,12 +147,12 @@ public class DraughtsController {
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
                 Tile tile = board[x][y];
-                tile.setStyle(tile.isDark() ? "-fx-background-color: beige;" : "-fx-background-color: black;");
+                tile.setStyle(tile.isDark() ? "-fx-background-color: darkgreen;" : "-fx-background-color: beige;");
             }
         }
     }
 
-    private void switchTurns() {
+    public void switchTurns() {
         isPlayer1Turn = !isPlayer1Turn;
         statusLabel.setText(isPlayer1Turn ? "Player 1's Turn" : "Player 2's Turn");
     }
