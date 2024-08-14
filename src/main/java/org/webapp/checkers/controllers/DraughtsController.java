@@ -42,7 +42,7 @@ public class DraughtsController {
                         Piece piece = new Piece(PieceType.RED, x, y);
                         tile.setPiece(piece);
                         redCount++;
-                    } else if (y >= 4 && whiteCount < 20) {
+                    } else if (y >= 6 && whiteCount < 20) { // Changed from 4 to 6 for white pieces
                         Piece piece = new Piece(PieceType.WHITE, x, y);
                         tile.setPiece(piece);
                         whiteCount++;
