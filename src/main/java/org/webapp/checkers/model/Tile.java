@@ -1,10 +1,9 @@
 package org.webapp.checkers.model;
 
 import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
-import javafx.scene.shape.Rectangle;
 import org.webapp.checkers.controllers.DraughtsController;
+import org.webapp.checkers.model.Piece;
 
 public class Tile extends StackPane {
     private final boolean isDark;
@@ -17,14 +16,12 @@ public class Tile extends StackPane {
         this.x = x;
         this.y = y;
 
-        // Set tile size and background color
+        // Set tile size
         setPrefSize(80, 80);
-        Rectangle background = new Rectangle(80, 80);
-        background.setFill(isDark ? Color.DARKGREEN : Color.BEIGE);
-        getChildren().add(background); // Add the background rectangle first
 
-        // Debugging logs to verify tile creation
-        System.out.println("Tile created at (" + x + ", " + y + "): " + (isDark ? "Dark" : "Light"));
+        // Set the initial background color using CSS
+        setStyle(isDark ? "-fx-background-color: #D2B48C;" : "-fx-background-color: beige;");
+
 
         // Set the click handler
         setOnMouseClicked(event -> {
@@ -39,6 +36,8 @@ public class Tile extends StackPane {
             }
         });
     }
+
+    // Other methods...
 
     public boolean hasPiece() {
         return piece != null;
@@ -71,5 +70,10 @@ public class Tile extends StackPane {
 
     public boolean isDark() {
         return isDark;
+    }
+
+    // Method to update the background color directly on the tile
+    public void setBackgroundColor(String color) {
+        setStyle("-fx-background-color: " + color + ";");
     }
 }
