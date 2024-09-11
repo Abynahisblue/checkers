@@ -20,7 +20,7 @@ public class Tile extends StackPane {
         setPrefSize(80, 80);
 
         // Set the initial background color using CSS
-        setStyle(isDark ? "-fx-background-color: #D2B48C;" : "-fx-background-color: beige;");
+        setStyle(isDark ? "-fx-background-color: #D2B48C;" : "");
 
 
         // Set the click handler

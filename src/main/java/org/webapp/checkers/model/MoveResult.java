@@ -2,7 +2,7 @@ package org.webapp.checkers.model;
 
 
 public class MoveResult {
-    private MoveType type;
+    private final MoveType type;
     private Piece capturedPiece;
 
     public MoveResult(MoveType type) {
