@@ -15,7 +15,7 @@ public class MainApplication extends Application {
     public void start(Stage primaryStage) {
         try {
             // Print the resource path to help with debugging
-            System.out.println(Objects.requireNonNull(this.getClass().getResource("/org/webapp/checkers/draught-view.fxml")));
+            // System.out.println(Objects.requireNonNull(this.getClass().getResource("/org/webapp/checkers/draught-view.fxml")));
 
             // Load the FXML file and set up the scene
             FXMLLoader loader = new FXMLLoader(Objects.requireNonNull(this.getClass().getResource("/org/webapp/checkers/draught-view.fxml")));

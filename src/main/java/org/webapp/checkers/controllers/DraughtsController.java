@@ -26,42 +26,68 @@ public class DraughtsController {
         return selectedPiece;
     }
 
-    @FXML
     public void initialize() {
         setupBoard();
+        boardPane.setOnMouseClicked(this::handleClick);
     }
 
+
     private void setupBoard() {
-        boardPane.getChildren().clear();
+        if (boardPane.getChildren().isEmpty()) {
+            // First-time setup (board creation)
+            for (int y = 0; y < HEIGHT; y++) {
+                for (int x = 0; x < WIDTH; x++) {
+                    Tile tile = new Tile((x + y) % 2 == 0, x, y, this);
+                    board[x][y] = tile;
+                    boardPane.add(tile, x, y);
+                }
+            }
+        }
+
+        // Reset game state, reusing tiles
         selectedPiece = null;
         isPlayer1Turn = true;
-        int redCount = 0;
-        int whiteCount = 0;
+        clearBoardPieces();
+        addPieces();
+        statusLabel.setText("Player 1's Turn");
+    }
 
+    private void clearBoardPieces() {
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
-                Tile tile = new Tile((x + y) % 2 == 0, x, y, this);
-                board[x][y] = tile;
-                boardPane.add(tile, x, y);
+                board[x][y].setPiece(null);
+            }
+        }
+    }
 
+    private void addPieces() {
+        int redCount = 0;
+        int whiteCount = 0;
+        for (int y = 0; y < HEIGHT; y++) {
+            for (int x = 0; x < WIDTH; x++) {
                 if ((x + y) % 2 != 0) {
                     if (y < 4 && redCount < 20) {
-                        Piece piece = new Piece(PieceType.RED, tile);
-                        tile.setPiece(piece);
+                        Piece piece = new Piece(PieceType.RED, board[x][y]);
+                        board[x][y].setPiece(piece);
                         redCount++;
                     } else if (y >= 6 && whiteCount < 20) {
-                        Piece piece = new Piece(PieceType.BLACK, tile);
-                        tile.setPiece(piece);
+                        Piece piece = new Piece(PieceType.BLACK, board[x][y]);
+                        board[x][y].setPiece(piece);
                         whiteCount++;
                     }
                 }
             }
         }
-        statusLabel.setText("Player 1's Turn");
     }
 
+    @FXML
+
     public void handleClick(MouseEvent event) {
-        Tile clickedTile = (Tile) event.getSource();
+        int x = (int) (event.getX() / TILE_SIZE);
+        int y = (int) (event.getY() / TILE_SIZE);
+        if (!isValidTile(x, y)) return;
+
+        Tile clickedTile = board[x][y];
 
         if (selectedPiece != null) {
             MoveResult result = tryMove(selectedPiece, clickedTile);
@@ -141,27 +167,20 @@ public class DraughtsController {
         int y = piece.getTile().getY();
         int forwardMoveDir = piece.getPieceType().getMoveDir();
 
-        // Check capture move in the forward-right diagonal direction
-        if (isValidTile(x + 2, y + 2 * forwardMoveDir) &&
-                isValidCaptureMove(x + 2, y + 2 * forwardMoveDir, x + 1, y + forwardMoveDir)) {
-            return true;
+        // Combine checks for forward and backward moves in one loop
+        int[][] directions = {
+                {2, 2 * forwardMoveDir}, {-2, 2 * forwardMoveDir},
+                {2, -2 * forwardMoveDir}, {-2, -2 * forwardMoveDir}
+        };
+
+        for (int[] dir : directions) {
+            if (isValidTile(x + dir[0], y + dir[1]) &&
+                    isValidCaptureMove(x + dir[0], y + dir[1], x + dir[0] / 2, y + dir[1] / 2)) {
+                return true;
+            }
         }
 
-        // Check capture move in the forward-left diagonal direction
-        if (isValidTile(x - 2, y + 2 * forwardMoveDir) &&
-                isValidCaptureMove(x - 2, y + 2 * forwardMoveDir, x - 1, y + forwardMoveDir)) {
-            return true;
-        }
-
-        // Check capture move in the backward-right diagonal direction (for kings)
-        if (isValidTile(x + 2, y - 2 / forwardMoveDir) &&
-                isValidCaptureMove(x + 2, y - 2 * forwardMoveDir, x + 1, y - forwardMoveDir)) {
-            return true;
-        }
-
-        // Check capture move in the backward-left diagonal direction (for kings)
-        return isValidTile(x - 2, y - 2 * forwardMoveDir) &&
-                isValidCaptureMove(x - 2, y - 2 * forwardMoveDir, x - 1, y - forwardMoveDir);
+        return false;
     }
 
 
@@ -182,13 +201,20 @@ public class DraughtsController {
 
         int x = selectedPiece.getTile().getX();
         int y = selectedPiece.getTile().getY();
+        int moveDir = selectedPiece.getPieceType().getMoveDir();
 
-        highlightTileIfValid(x + 1, y + selectedPiece.getPieceType().getMoveDir());
-        highlightTileIfValid(x - 1, y + selectedPiece.getPieceType().getMoveDir());
-
-        highlightCaptureMove(x + 2, y + 2 * selectedPiece.getPieceType().getMoveDir(), x + 1, y + selectedPiece.getPieceType().getMoveDir());
-        highlightCaptureMove(x - 2, y + 2 * selectedPiece.getPieceType().getMoveDir(), x - 1, y + selectedPiece.getPieceType().getMoveDir());
+        highlightMove(x + 1, y + moveDir);
+        highlightMove(x - 1, y + moveDir);
+        highlightCaptureMove(x + 2, y + 2 * moveDir, x + 1, y + moveDir);
+        highlightCaptureMove(x - 2, y + 2 * moveDir, x - 1, y + moveDir);
     }
+
+    private void highlightMove(int targetX, int targetY) {
+        if (isValidTile(targetX, targetY) && !board[targetX][targetY].hasPiece()) {
+            board[targetX][targetY].setStyle("-fx-background-color: lightgreen;");
+        }
+    }
+
 
     private void highlightTileIfValid(int x, int y) {
         if (isValidTile(x, y)) {
@@ -214,10 +240,13 @@ public class DraughtsController {
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
                 Tile tile = board[x][y];
-                tile.setStyle(tile.isDark() ? "-fx-background-color: #D2B48C;" : "-fx-background-color: beige;");
+                if (tile.getStyle().contains("lightgreen") || tile.getStyle().contains("lightblue")) {
+                    tile.setStyle(tile.isDark() ? "-fx-background-color: #D2B48C;" : "-fx-background-color: beige;");
+                }
             }
         }
     }
+
 
     public void switchTurns() {
         isPlayer1Turn = !isPlayer1Turn;
