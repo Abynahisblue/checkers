@@ -265,6 +265,10 @@ public class DraughtsController {
 
     @FXML
     public void restartGame() {
+        clearBoardPieces();
+
+        selectedPiece = null;
+
         setupBoard();
     }
 
