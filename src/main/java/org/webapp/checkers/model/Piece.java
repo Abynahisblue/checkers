@@ -5,8 +5,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
 public class Piece extends Region {
-    private PieceType pieceType;
-    private int x, y;
+    private final PieceType pieceType;
     private Tile tile;
     private Circle visual;
 
@@ -21,8 +20,6 @@ public class Piece extends Region {
 
     public Piece(PieceType pieceType, int x, int y) {
         this.pieceType = pieceType;
-        this.x = x;
-        this.y = y;
     }
 
     public Circle getVisual() {

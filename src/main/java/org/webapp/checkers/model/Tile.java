@@ -31,6 +31,7 @@ public class Tile extends StackPane {
                 MoveResult result = controller.tryMove(controller.getSelectedPiece(), this);
                 if (result.getType() != MoveType.NONE) { // Ensure a valid move
                     controller.makeMove(controller.getSelectedPiece(), this, result);
+                    controller.handleClick(event);
                     controller.switchTurns(); // Switch turns after a successful move
                 }
             }

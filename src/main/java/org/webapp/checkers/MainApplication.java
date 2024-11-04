@@ -8,7 +8,6 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Objects;
 
 public class MainApplication extends Application {
 
@@ -31,14 +30,13 @@ public class MainApplication extends Application {
             primaryStage.setTitle(WINDOW_TITLE);
             primaryStage.show();
         } catch (IOException e) {
-            handleException("Error loading FXML", e);
+            handleException(e);
         }
     }
 
-    private void handleException(String message, Exception e) {
-        System.err.println(message);
+    private void handleException(Exception e) {
+        System.err.println("Error loading FXML");
         e.printStackTrace();
-        // Here you could add code to display an error dialog to the user
     }
 
     public static void main(String[] args) {

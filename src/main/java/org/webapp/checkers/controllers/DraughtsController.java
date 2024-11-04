@@ -34,7 +34,6 @@ public class DraughtsController {
 
     private void setupBoard() {
         if (boardPane.getChildren().isEmpty()) {
-            // First-time setup (board creation)
             for (int y = 0; y < HEIGHT; y++) {
                 for (int x = 0; x < WIDTH; x++) {
                     Tile tile = new Tile((x + y) % 2 == 0, x, y, this);
@@ -80,23 +79,30 @@ public class DraughtsController {
         }
     }
 
-    @FXML
 
+    @FXML
     public void handleClick(MouseEvent event) {
         int x = (int) (event.getX() / TILE_SIZE);
         int y = (int) (event.getY() / TILE_SIZE);
         if (!isValidTile(x, y)) return;
 
         Tile clickedTile = board[x][y];
+        boolean capturesAvailable = hasAvailableCaptures();
 
         if (selectedPiece != null) {
             MoveResult result = tryMove(selectedPiece, clickedTile);
+
+            // Restrict moves to capture-only if captures are available
+            if (capturesAvailable && result.getType() != MoveType.FLY_OVER_CAPTURE) {
+                return; // Ignore any non-capture moves
+            }
+
             if (result.getType() != MoveType.NONE) {
                 makeMove(selectedPiece, clickedTile, result);
 
                 if (result.getType() == MoveType.FLY_OVER_CAPTURE && canCaptureAgain(selectedPiece)) {
                     clearHighlights();
-                    highlightPossibleMoves();
+                    highlightCaptureMoves(); // Highlight only captures for consecutive captures
                     return;
                 } else {
                     clearHighlights();
@@ -111,14 +117,19 @@ public class DraughtsController {
             if (clickedTile.hasPiece() && isCorrectPlayerTurn(clickedTile.getPiece())) {
                 selectedPiece = clickedTile.getPiece();
                 clearHighlights();
-                highlightPossibleMoves();
+                if (capturesAvailable) {
+                    highlightCaptureMoves(); // Highlight only capture moves
+                } else {
+                    highlightPossibleMoves(); // Highlight all moves if no capture is available
+                }
             } else {
-                // Clear any erroneous selection if the clicked tile is not a valid piece
                 clearHighlights();
                 selectedPiece = null;
             }
         }
     }
+
+
 
 
     public MoveResult tryMove(Piece piece, Tile targetTile) {
@@ -151,10 +162,11 @@ public class DraughtsController {
             Tile capturedTile = result.getCapturedPiece().getTile();
             capturedTile.setPiece(null);
 
+            // Check for additional captures
             if (canCaptureAgain(piece)) {
-                highlightPossibleMoves();
                 selectedPiece = piece;
                 clearHighlights();
+                highlightCaptureMoves(); // Highlight only further capture moves
                 return;
             } else {
                 selectedPiece = null;
@@ -167,7 +179,6 @@ public class DraughtsController {
         int y = piece.getTile().getY();
         int forwardMoveDir = piece.getPieceType().getMoveDir();
 
-        // Combine checks for forward and backward moves in one loop
         int[][] directions = {
                 {2, 2 * forwardMoveDir}, {-2, 2 * forwardMoveDir},
                 {2, -2 * forwardMoveDir}, {-2, -2 * forwardMoveDir}
@@ -175,7 +186,7 @@ public class DraughtsController {
 
         for (int[] dir : directions) {
             if (isValidTile(x + dir[0], y + dir[1]) &&
-                    isValidCaptureMove(x + dir[0], y + dir[1], x + dir[0] / 2, y + dir[1] / 2)) {
+                    isValidCaptureMove(piece, x + dir[0], y + dir[1], x + dir[0] / 2, y + dir[1] / 2)) {
                 return true;
             }
         }
@@ -184,17 +195,18 @@ public class DraughtsController {
     }
 
 
-    private boolean isValidCaptureMove(int targetX, int targetY, int midX, int midY) {
+    private boolean isValidCaptureMove(Piece piece, int targetX, int targetY, int midX, int midY) {
         if (isValidTile(targetX, targetY) && isValidTile(midX, midY)) {
             Tile targetTile = board[targetX][targetY];
             Tile midTile = board[midX][midY];
 
             return !targetTile.hasPiece() &&
                     midTile.hasPiece() &&
-                    midTile.getPiece().getPieceType() != selectedPiece.getPieceType();
+                    midTile.getPiece().getPieceType() != piece.getPieceType();
         }
         return false;
     }
+
 
     private void highlightPossibleMoves() {
         if (selectedPiece == null) return;
@@ -205,9 +217,46 @@ public class DraughtsController {
 
         highlightMove(x + 1, y + moveDir);
         highlightMove(x - 1, y + moveDir);
+    }
+
+    private void highlightCaptureMoves() {
+        if (selectedPiece == null) return;
+
+        int x = selectedPiece.getTile().getX();
+        int y = selectedPiece.getTile().getY();
+        int moveDir = selectedPiece.getPieceType().getMoveDir();
+
+        // Highlight capture moves only
         highlightCaptureMove(x + 2, y + 2 * moveDir, x + 1, y + moveDir);
         highlightCaptureMove(x - 2, y + 2 * moveDir, x - 1, y + moveDir);
     }
+
+
+//    private boolean hasAnyCaptureMove() {
+//        for (int y = 0; y < HEIGHT; y++) {
+//            for (int x = 0; x < WIDTH; x++) {
+//                Piece piece = board[x][y].getPiece();
+//                if (piece != null && isCorrectPlayerTurn(piece) && canCaptureAgain(piece)) {
+//                    return true;
+//                }
+//            }
+//        }
+//        return false;
+//    }
+
+    private boolean hasAvailableCaptures() {
+        for (int y = 0; y < HEIGHT; y++) {
+            for (int x = 0; x < WIDTH; x++) {
+                Piece piece = board[x][y].getPiece();
+                if (piece != null && isCorrectPlayerTurn(piece) && canCaptureAgain(piece)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
 
     private void highlightMove(int targetX, int targetY) {
         if (isValidTile(targetX, targetY) && !board[targetX][targetY].hasPiece()) {
@@ -230,11 +279,12 @@ public class DraughtsController {
             Tile targetTile = board[targetX][targetY];
             Tile midTile = board[midX][midY];
 
-            if (!targetTile.hasPiece() && midTile.hasPiece() && midTile.getPiece().getPieceType() != selectedPiece.getPieceType()) {
+            if (!targetTile.hasPiece() && midTile.hasPiece() && midTile.getPiece().getPieceType() != this.selectedPiece.getPieceType()) {
                 targetTile.setStyle("-fx-background-color: lightblue;");
             }
         }
     }
+
 
     private void clearHighlights() {
         for (int y = 0; y < HEIGHT; y++) {
@@ -262,6 +312,19 @@ public class DraughtsController {
 
         return (isPlayer1Turn && isRed) || (!isPlayer1Turn && isBlack);
     }
+
+//    private boolean hasAnyCaptureMove() {
+//        for (int y = 0; y < HEIGHT; y++) {
+//            for (int x = 0; x < WIDTH; x++) {
+//                Piece piece = board[x][y].getPiece();
+//                if (piece != null && isCorrectPlayerTurn(piece) && canCaptureAgain(piece)) {
+//                    return true;
+//                }
+//            }
+//        }
+//        return false;
+//    }
+
 
     @FXML
     public void restartGame() {
