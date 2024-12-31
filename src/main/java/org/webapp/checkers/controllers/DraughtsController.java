@@ -7,7 +7,6 @@ import javafx.scene.layout.GridPane;
 import org.webapp.checkers.model.*;
 
 public class DraughtsController {
-
     @FXML
     private GridPane boardPane;
 
@@ -21,18 +20,22 @@ public class DraughtsController {
 
     private Piece selectedPiece;
     private boolean isPlayer1Turn = true;
+    private boolean gameOver = false;
 
     public Piece getSelectedPiece() {
         return selectedPiece;
     }
 
     public void initialize() {
+        if (boardPane == null) {
+            throw new IllegalStateException("BoardPane not properly initialized by FXML loader");
+        }
         setupBoard();
         boardPane.setOnMouseClicked(this::handleClick);
     }
 
-
     private void setupBoard() {
+        // Initialize the board only if it's empty
         if (boardPane.getChildren().isEmpty()) {
             for (int y = 0; y < HEIGHT; y++) {
                 for (int x = 0; x < WIDTH; x++) {
@@ -43,18 +46,22 @@ public class DraughtsController {
             }
         }
 
-        // Reset game state, reusing tiles
+        resetGameState();
+    }
+
+    private void resetGameState() {
         selectedPiece = null;
         isPlayer1Turn = true;
+        gameOver = false;
         clearBoardPieces();
         addPieces();
-        statusLabel.setText("Player 1's Turn");
+        updateStatusLabel();
     }
 
     private void clearBoardPieces() {
-        for (int y = 0; y < HEIGHT; y++) {
-            for (int x = 0; x < WIDTH; x++) {
-                board[x][y].setPiece(null);
+        for (Tile[] rows : board) {
+            for (Tile tile : rows) {
+                tile.setPiece(null);
             }
         }
     }
@@ -62,16 +69,16 @@ public class DraughtsController {
     private void addPieces() {
         int redCount = 0;
         int blackCount = 0;
+        final int MAX_PIECES_PER_PLAYER = 20;
+
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
                 if ((x + y) % 2 != 0) {
-                    if (y < 4 && redCount < 20) {
-                        Piece piece = new Piece(PieceType.RED, board[x][y]);
-                        board[x][y].setPiece(piece);
+                    if (y < 4 && redCount < MAX_PIECES_PER_PLAYER) {
+                        addPiece(x, y, PieceType.RED);
                         redCount++;
-                    } else if (y >= 6 && blackCount < 20) {
-                        Piece piece = new Piece(PieceType.BLACK, board[x][y]);
-                        board[x][y].setPiece(piece);
+                    } else if (y >= 6 && blackCount < MAX_PIECES_PER_PLAYER) {
+                        addPiece(x, y, PieceType.BLACK);
                         blackCount++;
                     }
                 }
@@ -79,96 +86,100 @@ public class DraughtsController {
         }
     }
 
+    private void addPiece(int x, int y, PieceType type) {
+        Piece piece = new Piece(type, board[x][y]);
+        board[x][y].setPiece(piece);
+    }
 
     @FXML
     public void handleClick(MouseEvent event) {
+        if (gameOver) return;
+
         int x = (int) (event.getX() / TILE_SIZE);
         int y = (int) (event.getY() / TILE_SIZE);
+
         if (!isValidTile(x, y)) return;
 
         Tile clickedTile = board[x][y];
-        boolean capturesAvailable = hasAvailableCaptures(); // Check if captures are available for the current player
+        boolean capturesAvailable = hasAvailableCaptures();
 
         if (selectedPiece != null) {
-            // If captures are available, only allow capture moves
-            if (capturesAvailable) {
-                MoveResult result = tryMove(selectedPiece, clickedTile);
-
-                // Only process the move if it's a capture
-                if (result.getType() == MoveType.FLY_OVER_CAPTURE) {
-                    makeMove(selectedPiece, clickedTile, result);
-
-                    // Check for additional captures
-                    if (canCaptureAgain(selectedPiece)) {
-                        clearHighlights();
-                        highlightCaptureMoves(); // Only highlight additional capture moves
-                        return;
-                    } else {
-                        clearHighlights();
-                        selectedPiece = null;
-                        switchTurns();
-                    }
-                } else {
-                    // If it's not a capture move, just clear selection
-                    selectedPiece = null;
-                    clearHighlights();
-                }
-            } else {
-                // No captures available, process normal moves
-                MoveResult result = tryMove(selectedPiece, clickedTile);
-                if (result.getType() != MoveType.NONE) {
-                    makeMove(selectedPiece, clickedTile, result);
-                    clearHighlights();
-                    selectedPiece = null;
-                    switchTurns();
-                } else {
-                    selectedPiece = null;
-                    clearHighlights();
-                }
-            }
+            handleSelectedPieceMove(clickedTile, capturesAvailable);
         } else {
-            if (clickedTile.hasPiece() && isCorrectPlayerTurn(clickedTile.getPiece())) {
-                selectedPiece = clickedTile.getPiece();
-                clearHighlights();
+            handlePieceSelection(clickedTile, capturesAvailable);
+        }
 
-                // If captures are available, only show capture moves
-                if (capturesAvailable) {
-                    // Only highlight pieces that can actually capture
-                    if (canCaptureAgain(selectedPiece)) {
-                        highlightCaptureMoves();
-                    } else {
-                        // If this piece can't capture, deselect it
-                        selectedPiece = null;
-                        clearHighlights();
-                    }
-                } else {
-                    highlightPossibleMoves();
-                }
+        checkGameOver();
+    }
+
+    private void handleSelectedPieceMove(Tile clickedTile, boolean capturesAvailable) {
+        MoveResult result = tryMove(selectedPiece, clickedTile);
+
+        if (capturesAvailable && result.getType() != MoveType.FLY_OVER_CAPTURE) {
+            selectedPiece = null;
+            clearHighlights();
+            return;
+        }
+
+        if (result.getType() != MoveType.NONE) {
+            makeMove(selectedPiece, clickedTile, result);
+
+            if (result.getType() == MoveType.FLY_OVER_CAPTURE && canCaptureAgain(selectedPiece)) {
+                clearHighlights();
+                highlightCaptureMoves();
             } else {
                 clearHighlights();
                 selectedPiece = null;
+                switchTurns();
+            }
+        } else {
+            selectedPiece = null;
+            clearHighlights();
+        }
+    }
+
+    private void handlePieceSelection(Tile clickedTile, boolean capturesAvailable) {
+        if (clickedTile.hasPiece() && isCorrectPlayerTurn(clickedTile.getPiece())) {
+            Piece piece = clickedTile.getPiece();
+
+            // Always check for capture moves, but only enforce them after a capture
+            boolean hasCaptures = piece.getLastMoveType() == MoveType.FLY_OVER_CAPTURE &&
+                    canCaptureAgain(piece);
+
+            selectedPiece = piece;
+            clearHighlights();
+
+            if (hasCaptures) {
+                highlightCaptureMoves();
+            } else {
+                highlightPossibleMoves();
+                // Also show capture moves if they're available
+                if (capturesAvailable) {
+                    highlightCaptureMoves();
+                }
             }
         }
     }
 
-
-
-
-
     public MoveResult tryMove(Piece piece, Tile targetTile) {
         int dx = targetTile.getX() - piece.getTile().getX();
         int dy = targetTile.getY() - piece.getTile().getY();
+        int moveDir = piece.getPieceType().getMoveDir();
 
-        if (Math.abs(dx) == 1 && dy == piece.getPieceType().getMoveDir() && !targetTile.hasPiece()) {
+        // Normal move
+        if (Math.abs(dx) == 1 && dy == moveDir && !targetTile.hasPiece()) {
             return new MoveResult(MoveType.NORMAL);
         }
 
+        // Capture move
         if (Math.abs(dx) == 2 && Math.abs(dy) == 2) {
             int midX = (targetTile.getX() + piece.getTile().getX()) / 2;
             int midY = (targetTile.getY() + piece.getTile().getY()) / 2;
             Tile midTile = board[midX][midY];
 
-            if (midTile.hasPiece() && midTile.getPiece().getPieceType() != piece.getPieceType() && !targetTile.hasPiece()) {
+            if (midTile.hasPiece() &&
+                    midTile.getPiece().getPieceType() != piece.getPieceType() &&
+                    !targetTile.hasPiece()) {
                 return new MoveResult(MoveType.FLY_OVER_CAPTURE, midTile.getPiece());
             }
         }
@@ -177,64 +188,83 @@ public class DraughtsController {
     }
 
     public void makeMove(Piece piece, Tile targetTile, MoveResult result) {
-        boolean capturesAvailable = hasAvailableCaptures();
-        if (capturesAvailable && result.getType() != MoveType.FLY_OVER_CAPTURE) {
-            selectedPiece = piece;
-            return;
-        }
-        System.out.println("jhfdjncvdskjlbvhifjj:jdcnfoijdfgr9frju");
+        if (result.getType() == MoveType.NONE) return;
+
         piece.getTile().setPiece(null);
         targetTile.setPiece(piece);
         piece.setTile(targetTile);
+        piece.setLastMoveType(result.getType());
 
         if (result.getType() == MoveType.FLY_OVER_CAPTURE) {
-            Tile capturedTile = result.getCapturedPiece().getTile();
-            capturedTile.setPiece(null);
-
-            if (canCaptureAgain(piece)) {
-                selectedPiece = piece;
-                clearHighlights();
-                highlightCaptureMoves(); // Highlight only further capture moves
-                return;
+            Piece capturedPiece = result.getCapturedPiece();
+            if (capturedPiece != null) {
+                capturedPiece.getTile().setPiece(null);
             }
         }
-
-        selectedPiece = null;
     }
 
-    private boolean canCaptureAgain(Piece piece) {
-        int x = piece.getTile().getX();
-        int y = piece.getTile().getY();
-        int forwardMoveDir = piece.getPieceType().getMoveDir();
+    private boolean hasAvailableCaptures() {
+        // We want to check for capture moves regardless of last move type
+        for (Tile[] rows : board) {
+            for (Tile tile : rows) {
+                Piece piece = tile.getPiece();
+                if (piece != null && isCorrectPlayerTurn(piece)) {
+                    int[][] directions = {{2, 2}, {2, -2}, {-2, 2}, {-2, -2}};
+                    int currentX = piece.getTile().getX();
+                    int currentY = piece.getTile().getY();
 
-        int[][] directions = {
-                {2, 2 * forwardMoveDir}, {-2, 2 * forwardMoveDir},
-                {2, -2 * forwardMoveDir}, {-2, -2 * forwardMoveDir}
-        };
+                    for (int[] dir : directions) {
+                        int targetX = currentX + dir[0];
+                        int targetY = currentY + dir[1];
+                        int midX = currentX + dir[0] / 2;
+                        int midY = currentY + dir[1] / 2;
+
+                        if (isValidCaptureMove(piece, targetX, targetY, midX, midY)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    public boolean canCaptureAgain(Piece piece) {
+        // This method is specifically for checking additional captures
+        // after a capture move
+        if (piece.getLastMoveType() != MoveType.FLY_OVER_CAPTURE) {
+            return false;
+        }
+
+        int[][] directions = {{2, 2}, {2, -2}, {-2, 2}, {-2, -2}};
+        int currentX = piece.getTile().getX();
+        int currentY = piece.getTile().getY();
 
         for (int[] dir : directions) {
-            if (isValidTile(x + dir[0], y + dir[1]) &&
-                    isValidCaptureMove(piece, x + dir[0], y + dir[1], x + dir[0] / 2, y + dir[1] / 2)) {
+            int targetX = currentX + dir[0];
+            int targetY = currentY + dir[1];
+            int midX = currentX + dir[0] / 2;
+            int midY = currentY + dir[1] / 2;
+
+            if (isValidCaptureMove(piece, targetX, targetY, midX, midY)) {
                 return true;
             }
         }
-
         return false;
     }
 
 
     private boolean isValidCaptureMove(Piece piece, int targetX, int targetY, int midX, int midY) {
-        if (isValidTile(targetX, targetY) && isValidTile(midX, midY)) {
-            Tile targetTile = board[targetX][targetY];
-            Tile midTile = board[midX][midY];
-
-            return !targetTile.hasPiece() &&
-                    midTile.hasPiece() &&
-                    midTile.getPiece().getPieceType() != piece.getPieceType();
+        if (!isValidTile(targetX, targetY) || !isValidTile(midX, midY)) {
+            return false;
         }
-        return false;
-    }
 
+        Tile targetTile = board[targetX][targetY];
+        Tile midTile = board[midX][midY];
+
+        return !targetTile.hasPiece() &&
+                midTile.hasPiece() &&
+                midTile.getPiece().getPieceType() != piece.getPieceType();
+    }
 
     private void highlightPossibleMoves() {
         if (selectedPiece == null) return;
@@ -254,25 +284,11 @@ public class DraughtsController {
         int y = selectedPiece.getTile().getY();
         int moveDir = selectedPiece.getPieceType().getMoveDir();
 
-        // Highlight capture moves only
-        highlightCaptureMove(x + 2, y + 2 * moveDir, x + 1, y + moveDir);
-        highlightCaptureMove(x - 2, y + 2 * moveDir, x - 1, y + moveDir);
+        highlightCaptureMove(x + 2, y + 2, x + 1, y + 1);
+        highlightCaptureMove(x - 2, y + 2, x - 1, y + 1);
+        highlightCaptureMove(x + 2, y - 2, x + 1, y - 1);
+        highlightCaptureMove(x - 2, y - 2, x - 1, y - 1);
     }
-
-
-    private boolean hasAvailableCaptures() {
-        for (int y = 0; y < HEIGHT; y++) {
-            for (int x = 0; x < WIDTH; x++) {
-                Piece piece = board[x][y].getPiece();
-                if (piece != null && isCorrectPlayerTurn(piece) && canCaptureAgain(piece)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-
 
     private void highlightMove(int targetX, int targetY) {
         if (isValidTile(targetX, targetY) && !board[targetX][targetY].hasPiece()) {
@@ -280,68 +296,77 @@ public class DraughtsController {
         }
     }
 
-
-    private void highlightTileIfValid(int x, int y) {
-        if (isValidTile(x, y)) {
-            Tile tile = board[x][y];
-            if (!tile.hasPiece()) {
-                tile.setStyle("-fx-background-color: lightgreen;");
-            }
-        }
-    }
-
     private void highlightCaptureMove(int targetX, int targetY, int midX, int midY) {
-        if (isValidTile(targetX, targetY)) {
-            Tile targetTile = board[targetX][targetY];
-            Tile midTile = board[midX][midY];
+        if (!isValidTile(targetX, targetY) || !isValidTile(midX, midY)) return;
 
-            if (!targetTile.hasPiece() && midTile.hasPiece() && midTile.getPiece().getPieceType() != this.selectedPiece.getPieceType()) {
-                targetTile.setStyle("-fx-background-color: lightblue;");
-            }
+        Tile targetTile = board[targetX][targetY];
+        Tile midTile = board[midX][midY];
+
+        if (!targetTile.hasPiece() &&
+                midTile.hasPiece() &&
+                midTile.getPiece().getPieceType() != selectedPiece.getPieceType()) {
+            targetTile.setStyle("-fx-background-color: lightblue;");
         }
     }
-
 
     private void clearHighlights() {
-        for (int y = 0; y < HEIGHT; y++) {
-            for (int x = 0; x < WIDTH; x++) {
-                Tile tile = board[x][y];
+        for (Tile[] rows : board) {
+            for (Tile tile : rows) {
                 if (tile.getStyle().contains("lightgreen") || tile.getStyle().contains("lightblue")) {
                     tile.setStyle(tile.isDark() ? "-fx-background-color: #D2B48C;" : "-fx-background-color: beige;");
                 }
             }
         }
     }
+    private void checkGameOver() {
+        boolean redPiecesExist = false;
+        boolean blackPiecesExist = false;
 
+        for (Tile[] rows : board) {
+            for (Tile tile : rows) {
+                if (tile.hasPiece()) {
+                    if (tile.getPiece().getPieceType() == PieceType.RED) {
+                        redPiecesExist = true;
+                    } else {
+                        blackPiecesExist = true;
+                    }
+                }
+            }
+        }
+
+        if (!redPiecesExist || !blackPiecesExist) {
+            gameOver = true;
+            String winner = redPiecesExist ? "Player 1 (Red)" : "Player 2 (Black)";
+            statusLabel.setText("Game Over! " + winner + " wins!");
+        }
+    }
 
     public void switchTurns() {
-        isPlayer1Turn = !isPlayer1Turn;
-        statusLabel.setText(isPlayer1Turn ? "Player 1's Turn" : "Player 2's Turn");
+        if (hasAvailableCaptures()) return;
 
+        isPlayer1Turn = !isPlayer1Turn;
+        updateStatusLabel();
         selectedPiece = null;
         clearHighlights();
     }
 
-    private boolean isCorrectPlayerTurn(Piece piece) {
-        boolean isRed = piece.getPieceType() == PieceType.RED;
-        boolean isBlack = piece.getPieceType() == PieceType.BLACK;
-
-        return (isPlayer1Turn && isRed) || (!isPlayer1Turn && isBlack);
+    private void updateStatusLabel() {
+        if (!gameOver) {
+            statusLabel.setText(isPlayer1Turn ? "Player 1's Turn" : "Player 2's Turn");
+        }
     }
 
+    private boolean isCorrectPlayerTurn(Piece piece) {
+        return (isPlayer1Turn && piece.getPieceType() == PieceType.RED) ||
+                (!isPlayer1Turn && piece.getPieceType() == PieceType.BLACK);
+    }
 
     @FXML
     public void restartGame() {
-        clearBoardPieces();
-
-        selectedPiece = null;
-
-        setupBoard();
+        resetGameState();
     }
 
     private boolean isValidTile(int x, int y) {
         return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT;
     }
-
-
 }
