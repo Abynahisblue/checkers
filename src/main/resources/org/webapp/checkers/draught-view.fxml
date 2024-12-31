@@ -3,10 +3,8 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.StackPane?>
-<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.GridPane?>
-
+<?import javafx.scene.layout.VBox?>
 <VBox alignment="CENTER" xmlns:fx="http://javafx.com/fxml"
       fx:controller="org.webapp.checkers.controllers.DraughtsController">
     <padding>
@@ -17,7 +15,7 @@
     <Label text="Draughts Game" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
 
     <!-- Game Board -->
-    <GridPane fx:id="boardPane" alignment="CENTER">
+    <GridPane fx:id="boardPane" alignment="CENTER" >
         <!-- The boardPane will be dynamically populated with Tiles in the controller -->
     </GridPane>
 

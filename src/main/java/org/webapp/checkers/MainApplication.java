@@ -7,32 +7,36 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import java.io.IOException;
-import java.util.Objects;
+import java.net.URL;
 
 public class MainApplication extends Application {
+
+    private static final String FXML_PATH = "/org/webapp/checkers/draught-view.fxml";
+    private static final String WINDOW_TITLE = "Draughts Game";
 
     @Override
     public void start(Stage primaryStage) {
         try {
-            // Print the resource path to help with debugging
-            System.out.println(Objects.requireNonNull(this.getClass().getResource("/org/webapp/checkers/draught-view.fxml")));
+            URL fxmlUrl = getClass().getResource(FXML_PATH);
+            if (fxmlUrl == null) {
+                throw new IOException("FXML file not found: " + FXML_PATH);
+            }
 
-            // Load the FXML file and set up the scene
-            FXMLLoader loader = new FXMLLoader(Objects.requireNonNull(this.getClass().getResource("/org/webapp/checkers/draught-view.fxml")));
+            FXMLLoader loader = new FXMLLoader(fxmlUrl);
             Parent root = loader.load();
             Scene scene = new Scene(root);
 
-            // Set up the primary stage
             primaryStage.setScene(scene);
-            primaryStage.setTitle("Draughts Game");
+            primaryStage.setTitle(WINDOW_TITLE);
             primaryStage.show();
         } catch (IOException e) {
-            e.printStackTrace();
-            // Handle the exception (e.g., show an error dialog)
-        } catch (NullPointerException e) {
-            e.printStackTrace();
-            // Handle the null pointer exception (e.g., FXML file not found)
+            handleException(e);
         }
+    }
+
+    private void handleException(Exception e) {
+        System.err.println("Error loading FXML");
+        e.printStackTrace();
     }
 
     public static void main(String[] args) {

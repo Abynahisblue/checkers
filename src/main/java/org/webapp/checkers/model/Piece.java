@@ -5,10 +5,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 
 public class Piece extends Region {
-    private PieceType pieceType;
-    private int x, y;
+    private final PieceType pieceType;
     private Tile tile;
     private Circle visual;
+    private MoveType lastMoveType;
+
 
     public Piece(PieceType pieceType, Tile tile) {
         this.pieceType = pieceType;
@@ -21,8 +22,6 @@ public class Piece extends Region {
 
     public Piece(PieceType pieceType, int x, int y) {
         this.pieceType = pieceType;
-        this.x = x;
-        this.y = y;
     }
 
     public Circle getVisual() {
@@ -36,6 +35,15 @@ public class Piece extends Region {
     public Tile getTile() {
         return tile;
     }
+
+    public void setLastMoveType(MoveType moveType) {
+        this.lastMoveType = moveType;
+    }
+
+    public MoveType getLastMoveType() {
+        return lastMoveType;
+    }
+
 
     public void setTile(Tile tile) {
         this.tile = tile;
