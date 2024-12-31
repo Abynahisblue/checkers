@@ -3,7 +3,6 @@ package org.webapp.checkers.model;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Circle;
 import org.webapp.checkers.controllers.DraughtsController;
-import org.webapp.checkers.model.Piece;
 
 public class Tile extends StackPane {
     private final boolean isDark;
